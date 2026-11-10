@@ -10,7 +10,7 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: 'PS5 Upcoming Releases',
+      title: 'Day One',
       htmlAttrs: { lang: 'en' },
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
@@ -23,7 +23,7 @@ export default defineNuxtConfig({
       meta: [
         {
           name: 'description',
-          content: 'PlayStation 5 game releases in a chosen date range.',
+          content: 'Upcoming game releases across PlayStation, Xbox, Nintendo and PC, as a wall of covers.',
         },
       ],
     },

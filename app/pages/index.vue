@@ -257,7 +257,7 @@ function onRangeSubmit() {
   <div class="min-h-screen pb-16">
     <header class="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-white/10 bg-black/80 px-3 py-2 backdrop-blur sm:px-5">
       <h1 class="font-display text-2xl tracking-wider sm:text-3xl">
-        Upcoming<span class="text-red-500">.</span>
+        Day One<span class="text-red-500">.</span>
       </h1>
 
       <div class="flex min-w-0 items-center gap-1">

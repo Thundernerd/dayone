@@ -1,75 +1,27 @@
-# Nuxt Minimal Starter
+# Day One
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+Upcoming game releases across PlayStation, Xbox, Nintendo and PC, shown as a wall of covers grouped by launch day. Data comes from [IGDB](https://www.igdb.com/).
 
 ## Setup
 
-Make sure to install dependencies:
+IGDB is accessed through a Twitch application. Register a confidential app at <https://dev.twitch.tv/console/apps>, then copy `.env.example` to `.env` and fill in the credentials:
 
 ```bash
-# npm
+cp .env.example .env
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+## Development
 
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+npm run dev      # http://localhost:3000
 ```
 
 ## Production
 
-Build the application for production:
-
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
+npm run preview  # preview the production build locally
 ```
 
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+See the [Nuxt deployment docs](https://nuxt.com/docs/getting-started/deployment) for hosting options.
