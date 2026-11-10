@@ -1,0 +1,17 @@
+node_modules
+.nuxt
+.output
+.nitro
+.cache
+.data
+dist
+.git
+.github
+.playwright-mcp
+*.log
+.DS_Store
+
+# Never bake credentials into the image; pass them at runtime instead.
+.env
+.env.*
+!.env.example
