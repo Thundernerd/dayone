@@ -212,37 +212,130 @@ const errorMessage = computed(() => {
 
   return error.value.statusMessage || error.value.message || 'Could not load releases.'
 })
+
+const drawerOpen = ref(false)
+
+function onKeydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') {
+    drawerOpen.value = false
+  }
+}
+
+onMounted(() => window.addEventListener('keydown', onKeydown))
+onUnmounted(() => window.removeEventListener('keydown', onKeydown))
+
+const rangeLabel = computed(() => isFullMonth.value
+  ? selectedMonthLabel.value
+  : `${formatShortDate(from.value)} – ${formatShortDate(to.value)}`)
+
+const compactRangeLabel = computed(() => isFullMonth.value
+  ? selectedMonthLabel.value
+  : `${formatShortDate(from.value, false)} – ${formatShortDate(to.value, false)}`)
+
+function formatShortDate(iso: string, withYear = true) {
+  const parsed = parseIsoDate(iso)
+  if (!parsed) {
+    return iso
+  }
+
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    ...(withYear ? { year: 'numeric' as const } : {}),
+    timeZone: 'UTC',
+  }).format(parsed)
+}
+
+function onRangeSubmit() {
+  onSubmit()
+  drawerOpen.value = false
+}
+
 </script>
 
 <template>
-  <div class="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
-    <header class="mb-8 flex flex-col gap-6 border-b border-white/10 pb-8">
-      <div>
-        <p class="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-blue-300">
-          {{ platformLabel }}
-        </p>
-        <h1 class="text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-          Upcoming releases
-        </h1>
-        <p class="mt-2 max-w-2xl text-sm leading-relaxed text-[#9aa3b5] sm:text-base">
-          Games with a full release on {{ platformSentence }} in the selected window. DLC, expansions, early access, and other add-ons are excluded.
-        </p>
+  <div class="min-h-screen pb-16">
+    <header class="sticky top-0 z-30 flex items-center justify-between gap-2 border-b border-white/10 bg-black/80 px-3 py-2 backdrop-blur sm:px-5">
+      <h1 class="font-display text-2xl tracking-wider sm:text-3xl">
+        Upcoming<span class="text-red-500">.</span>
+      </h1>
+
+      <div class="flex min-w-0 items-center gap-1">
+        <button
+          class="h-9 w-9 shrink-0 rounded-full text-lg hover:bg-white/10 disabled:opacity-30"
+          type="button"
+          aria-label="Previous month"
+          :disabled="pending"
+          @click="shiftSelectedMonth(-1)"
+        >
+          ‹
+        </button>
+        <span class="truncate text-center font-display text-lg tracking-wider sm:min-w-[10rem] sm:text-xl">
+          <span class="sm:hidden">{{ compactRangeLabel }}</span>
+          <span class="hidden sm:inline">{{ rangeLabel }}</span>
+        </span>
+        <button
+          class="h-9 w-9 shrink-0 rounded-full text-lg hover:bg-white/10 disabled:opacity-30"
+          type="button"
+          aria-label="Next month"
+          :disabled="pending"
+          @click="shiftSelectedMonth(1)"
+        >
+          ›
+        </button>
       </div>
 
-      <div class="flex flex-col gap-4">
-        <div class="flex flex-col gap-2">
-          <p class="text-sm text-[#9aa3b5]">
+      <button
+        class="shrink-0 rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold uppercase tracking-widest transition hover:bg-white hover:text-black sm:px-4"
+        type="button"
+        aria-haspopup="dialog"
+        :aria-expanded="drawerOpen"
+        @click="drawerOpen = true"
+      >
+        <span class="hidden sm:inline">{{ platformLabel }} · </span>Filters
+      </button>
+    </header>
+
+    <Transition name="fade">
+      <div
+        v-if="drawerOpen"
+        class="fixed inset-0 z-40 bg-black/60"
+        @click="drawerOpen = false"
+      />
+    </Transition>
+    <Transition name="slide">
+      <aside
+        v-if="drawerOpen"
+        class="fixed inset-y-0 right-0 z-50 flex w-80 max-w-full flex-col gap-7 overflow-y-auto bg-neutral-950 p-6 ring-1 ring-white/10"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filters"
+      >
+        <div class="flex items-center justify-between">
+          <h2 class="font-display text-3xl tracking-wider">
+            Filters
+          </h2>
+          <button
+            type="button"
+            class="text-2xl text-white/60 hover:text-white"
+            aria-label="Close filters"
+            @click="drawerOpen = false"
+          >
+            ×
+          </button>
+        </div>
+
+        <section>
+          <h3 class="mb-2 text-xs uppercase tracking-widest text-white/50">
             Platforms
-          </p>
-          <div class="flex flex-wrap gap-2">
+          </h3>
+          <div class="grid grid-cols-2 gap-1.5">
             <button
               v-for="option in PLATFORMS"
               :key="option.slug"
-              class="rounded-xl border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
-              :class="selectedSlugs.includes(option.slug)
-                ? 'border-blue-400/40 bg-blue-500 text-white'
-                : 'border-white/10 bg-[#141821] text-[#eef1f6] hover:border-white/20 hover:bg-[#1b2130]'"
               type="button"
+              class="py-2 text-sm font-semibold transition disabled:cursor-not-allowed"
+              :class="selectedSlugs.includes(option.slug) ? 'bg-red-600 text-white' : 'bg-white/5 text-white/60 hover:bg-white/10'"
               :aria-pressed="selectedSlugs.includes(option.slug)"
               :disabled="pending"
               @click="togglePlatform(option.slug)"
@@ -250,198 +343,185 @@ const errorMessage = computed(() => {
               {{ option.shortName }}
             </button>
           </div>
-          <button
-            class="mt-1 flex w-fit items-center gap-3 rounded-xl px-1 py-1 text-left text-sm text-[#9aa3b5] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
-            type="button"
-            role="switch"
-            :aria-checked="requireAll"
-            :disabled="pending || !canRequireAll"
-            :title="canRequireAll ? 'Show only games releasing on every selected platform' : 'Select at least two platforms'"
-            @click="toggleRequireAll"
+          <label
+            class="mt-3 flex items-center gap-2 text-sm"
+            :class="canRequireAll ? 'text-white/70' : 'text-white/30'"
+            :title="canRequireAll ? '' : 'Select at least two platforms'"
           >
-            <span
-              class="relative h-6 w-11 shrink-0 rounded-full transition"
-              :class="requireAll && canRequireAll ? 'bg-blue-500' : 'bg-white/15'"
+            <input
+              type="checkbox"
+              class="accent-red-600"
+              :checked="requireAll && canRequireAll"
+              :disabled="!canRequireAll || pending"
+              @change="toggleRequireAll()"
             >
-              <span
-                class="absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition"
-                :class="requireAll && canRequireAll ? 'translate-x-5' : 'translate-x-0'"
-              />
-            </span>
-            Only games on every selected platform
-          </button>
-        </div>
+            Must be on every selected platform
+          </label>
+        </section>
 
-        <div class="flex flex-col gap-2">
-          <p class="text-sm text-[#9aa3b5]">
-            Junk filters
-          </p>
-          <div class="flex flex-wrap gap-2">
-            <button
-              v-for="key in JUNK_BOOLEAN_KEYS"
-              :key="key"
-              class="rounded-xl border px-3 py-2 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-60"
-              :class="junk[key]
-                ? 'border-blue-400/40 bg-blue-500 text-white'
-                : 'border-white/10 bg-[#141821] text-[#eef1f6] hover:border-white/20 hover:bg-[#1b2130]'"
-              type="button"
-              :aria-pressed="junk[key]"
+        <section>
+          <h3 class="mb-2 text-xs uppercase tracking-widest text-white/50">
+            Dates
+          </h3>
+          <label class="block text-sm text-white/70">
+            Month
+            <input
+              v-model="monthInput"
+              class="mt-1 w-full bg-white/5 px-3 py-2 text-white outline-none ring-red-600 focus:ring-2"
+              type="month"
+              :min="MONTH_MIN"
+              :max="MONTH_MAX"
               :disabled="pending"
-              @click="toggleJunkBoolean(key)"
+              @change="onMonthChange"
             >
-              {{ JUNK_BOOLEAN_LABELS[key] }}
+          </label>
+          <form
+            class="mt-4 flex flex-col gap-2"
+            @submit.prevent="onRangeSubmit"
+          >
+            <p class="text-sm text-white/70">
+              Or a custom range
+            </p>
+            <div class="grid grid-cols-2 gap-2">
+              <label class="text-xs text-white/50">
+                From
+                <input
+                  v-model="fromInput"
+                  class="mt-1 w-full bg-white/5 px-2 py-2 text-sm text-white outline-none ring-red-600 focus:ring-2"
+                  type="date"
+                  required
+                >
+              </label>
+              <label class="text-xs text-white/50">
+                To
+                <input
+                  v-model="toInput"
+                  class="mt-1 w-full bg-white/5 px-2 py-2 text-sm text-white outline-none ring-red-600 focus:ring-2"
+                  type="date"
+                  required
+                >
+              </label>
+            </div>
+            <button
+              class="bg-white py-2 text-sm font-semibold uppercase tracking-widest text-black transition hover:bg-red-600 hover:text-white disabled:opacity-50"
+              type="submit"
+              :disabled="pending"
+            >
+              Apply range
             </button>
-          </div>
-          <label class="flex flex-col gap-2 text-sm text-[#9aa3b5]">
-            <span class="flex items-center justify-between gap-3">
+          </form>
+        </section>
+
+        <section>
+          <h3 class="mb-2 text-xs uppercase tracking-widest text-white/50">
+            Junk
+          </h3>
+          <label
+            v-for="key in JUNK_BOOLEAN_KEYS"
+            :key="key"
+            class="flex items-center gap-2 py-1 text-sm text-white/70"
+          >
+            <input
+              type="checkbox"
+              class="accent-red-600"
+              :checked="junk[key]"
+              :disabled="pending"
+              @change="toggleJunkBoolean(key)"
+            >
+            {{ JUNK_BOOLEAN_LABELS[key] }}
+          </label>
+          <label class="mt-3 block text-sm text-white/70">
+            <span class="flex justify-between">
               Minimum hypes
-              <span class="text-white">{{ hypesLabel(hypesInput) }}</span>
+              <strong class="text-white">{{ hypesLabel(hypesInput) }}</strong>
             </span>
             <input
-              :value="hypesInput"
-              class="w-full accent-blue-500"
               type="range"
+              class="mt-1 w-full accent-red-600"
               :min="HYPES_MIN"
               :max="HYPES_MAX"
               step="1"
+              :value="hypesInput"
               :disabled="pending"
               @input="onHypesInput"
             >
           </label>
-        </div>
+        </section>
 
-        <div class="flex flex-col gap-2">
-          <p class="text-sm text-[#9aa3b5]">
-            Month
-          </p>
-          <div class="flex flex-wrap items-center gap-2">
-            <button
-              class="rounded-xl border border-white/10 bg-[#141821] px-3 py-2.5 text-white transition hover:border-white/20 hover:bg-[#1b2130] disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              aria-label="Previous month"
-              :disabled="pending"
-              @click="shiftSelectedMonth(-1)"
-            >
-              ‹
-            </button>
-            <label class="relative min-w-[10rem] flex-1">
-              <span class="sr-only">Select month</span>
-              <input
-                v-model="monthInput"
-                class="w-full rounded-xl border border-white/10 bg-[#141821] px-3 py-2.5 text-white outline-none ring-blue-500 focus:ring-2"
-                type="month"
-                :min="MONTH_MIN"
-                :max="MONTH_MAX"
-                :disabled="pending"
-                @change="onMonthChange"
-              >
-            </label>
-            <button
-              class="rounded-xl border border-white/10 bg-[#141821] px-3 py-2.5 text-white transition hover:border-white/20 hover:bg-[#1b2130] disabled:cursor-not-allowed disabled:opacity-60"
-              type="button"
-              aria-label="Next month"
-              :disabled="pending"
-              @click="shiftSelectedMonth(1)"
-            >
-              ›
-            </button>
-            <p
-              v-if="isFullMonth"
-              class="text-sm text-[#9aa3b5]"
-            >
-              {{ selectedMonthLabel }}
-            </p>
-          </div>
-        </div>
-
-        <form
-          class="flex flex-col gap-3 sm:flex-row sm:items-end"
-          @submit.prevent="onSubmit"
-        >
-          <label class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm text-[#9aa3b5]">
-            Start date
-            <input
-              v-model="fromInput"
-              class="rounded-xl border border-white/10 bg-[#141821] px-3 py-2.5 text-white outline-none ring-blue-500 focus:ring-2"
-              type="date"
-              required
-            >
-          </label>
-          <label class="flex min-w-0 flex-1 flex-col gap-1.5 text-sm text-[#9aa3b5]">
-            End date
-            <input
-              v-model="toInput"
-              class="rounded-xl border border-white/10 bg-[#141821] px-3 py-2.5 text-white outline-none ring-blue-500 focus:ring-2"
-              type="date"
-              required
-            >
-          </label>
-          <button
-            class="rounded-xl bg-blue-500 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-400 disabled:cursor-not-allowed disabled:opacity-60"
-            type="submit"
-            :disabled="pending"
-          >
-            {{ pending ? 'Loading…' : 'Show releases' }}
-          </button>
-        </form>
-      </div>
-    </header>
+        <p class="mt-auto text-xs leading-relaxed text-white/40">
+          Full releases on {{ platformSentence }}. DLC, expansions, early access and other add-ons are excluded.
+        </p>
+      </aside>
+    </Transition>
 
     <p
       v-if="pending"
-      class="mb-6 text-sm text-[#9aa3b5]"
+      class="animate-pulse py-32 text-center font-display text-4xl tracking-widest text-white/30"
     >
-      Loading {{ platformLabel }} releases…
+      Loading
     </p>
 
     <section
       v-else-if="error"
-      class="rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-6 text-sm text-red-100"
+      class="mx-auto mt-16 max-w-md px-4 text-center"
     >
-      <h2 class="mb-1 font-semibold text-red-50">
+      <h2 class="font-display text-4xl tracking-wider text-red-500">
         Could not load releases
       </h2>
-      <p>{{ errorMessage }}</p>
+      <p class="mt-2 text-sm text-white/60">
+        {{ errorMessage }}
+      </p>
     </section>
 
     <section
       v-else-if="!groups.length"
-      class="rounded-2xl border border-white/10 bg-[#141821] px-5 py-10 text-center"
+      class="mx-auto mt-16 max-w-md px-4 text-center"
     >
-      <h2 class="text-lg font-semibold text-white">
-        No {{ platformLabel }} releases
+      <h2 class="font-display text-4xl tracking-widest text-white/30">
+        Nothing here
       </h2>
-      <p class="mt-2 text-sm text-[#9aa3b5]">
-        Nothing in IGDB matches a {{ platformSentence }} launch between {{ from }} and {{ to }}{{ requireAll && canRequireAll ? ' on every selected platform' : '' }}.
+      <p class="mt-2 text-sm text-white/50">
+        No {{ platformSentence }} releases between {{ from }} and {{ to }}{{ requireAll && canRequireAll ? ' on every selected platform' : '' }}.
       </p>
     </section>
 
     <div
       v-else
-      class="flex flex-col gap-10"
+      class="grid grid-cols-3 gap-px bg-white/5 sm:grid-cols-4 md:grid-cols-6 xl:grid-cols-8"
     >
-      <p class="text-sm text-[#9aa3b5]">
-        {{ data?.count }} {{ data?.count === 1 ? 'game' : 'games' }}
-        releasing on {{ requireAll && canRequireAll ? 'every selected platform' : platformLabel }}
-        from {{ from }} to {{ to }}.
-      </p>
-
-      <section
+      <template
         v-for="group in groups"
         :key="group.date"
-        class="flex flex-col gap-4"
       >
-        <h2 class="text-lg font-semibold text-white">
-          {{ group.label }}
-        </h2>
-        <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          <GameCard
-            v-for="game in group.games"
-            :key="game.id"
-            :game="game"
-          />
-        </div>
-      </section>
+        <DateTile :group="group" />
+        <GameCard
+          v-for="game in group.games"
+          :key="game.id"
+          :game="game"
+        />
+      </template>
     </div>
   </div>
 </template>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.25s ease;
+}
+
+.slide-enter-from,
+.slide-leave-to {
+  transform: translateX(100%);
+}
+</style>

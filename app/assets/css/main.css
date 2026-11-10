@@ -1,12 +1,8 @@
 :root {
   color-scheme: dark;
-  --bg: #0b0d12;
-  --bg-elevated: #141821;
-  --line: rgba(255, 255, 255, 0.08);
-  --text: #eef1f6;
-  --muted: #9aa3b5;
-  --accent: #3b82f6;
-  --accent-soft: rgba(59, 130, 246, 0.16);
+  --bg: #000;
+  --text: #fff;
+  --accent: #dc2626;
 }
 
 html,
@@ -17,12 +13,13 @@ body,
 
 body {
   margin: 0;
-  background:
-    radial-gradient(1200px 500px at 10% -10%, rgba(59, 130, 246, 0.16), transparent 55%),
-    radial-gradient(900px 400px at 100% 0%, rgba(14, 165, 233, 0.08), transparent 50%),
-    var(--bg);
+  background: var(--bg);
   color: var(--text);
-  font-family: "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, "Segoe UI", "Helvetica Neue", ui-sans-serif, system-ui, sans-serif;
+}
+
+.font-display {
+  font-family: "Bebas Neue", Impact, "Arial Narrow", sans-serif;
 }
 
 ::selection {
