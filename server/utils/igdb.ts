@@ -49,8 +49,10 @@ let cachedToken: CachedToken | null = null
 
 function requireCredentials() {
   const config = useRuntimeConfig()
-  const clientId = String(config.twitchClientId || '')
-  const clientSecret = String(config.twitchClientSecret || '')
+  // Nuxt only overrides runtimeConfig with NUXT_-prefixed vars at runtime, so a prebuilt
+  // image (e.g. Docker) would otherwise ignore TWITCH_CLIENT_ID/SECRET set on the container.
+  const clientId = String(config.twitchClientId || process.env.TWITCH_CLIENT_ID || '')
+  const clientSecret = String(config.twitchClientSecret || process.env.TWITCH_CLIENT_SECRET || '')
 
   if (!clientId || !clientSecret) {
     throw createError({
@@ -96,7 +98,7 @@ async function igdbPost<T>(body: string, retried = false): Promise<T> {
   const { token, clientId } = await fetchAccessToken(retried)
 
   try {
-    return await $fetch<T>('https://api.igdb.com/v4/release_dates', {
+    return await $fetch<T, string>('https://api.igdb.com/v4/release_dates', {
       method: 'POST',
       headers: {
         'Client-ID': clientId,
@@ -268,7 +270,7 @@ function mergeByGame(rows: IgdbReleaseDate[]): ReleaseGame[] {
   return [...byGame.values()]
     .map(({ game, byPlatform }) => {
       const platforms = [...byPlatform.values()].sort((a, b) => a.releaseDate - b.releaseDate)
-      const earliest = platforms[0]
+      const earliest = platforms[0]!
 
       return {
         id: game.id,

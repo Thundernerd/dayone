@@ -81,11 +81,11 @@ export function hasAllPlatformSlugs(
 
 export function formatPlatformList(platforms: PlatformOption[], conjunction: 'or' | 'and' = 'or'): string {
   if (platforms.length === 1) {
-    return platforms[0].name
+    return platforms[0]!.name
   }
 
   if (platforms.length === 2) {
-    return `${platforms[0].name} ${conjunction} ${platforms[1].name}`
+    return `${platforms[0]!.name} ${conjunction} ${platforms[1]!.name}`
   }
 
   const names = platforms.map(platform => platform.name)

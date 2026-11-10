@@ -6,7 +6,7 @@ export function isIsoDate(value: string): boolean {
     return false
   }
 
-  const [year, month, day] = value.split('-').map(Number)
+  const [year = 0, month = 0, day = 0] = value.split('-').map(Number)
   const date = utcDate(year, month, day)
   return (
     date.getUTCFullYear() === year
@@ -24,7 +24,7 @@ export function parseIsoDate(value: string): Date | null {
     return null
   }
 
-  const [year, month, day] = value.split('-').map(Number)
+  const [year = 0, month = 0, day = 0] = value.split('-').map(Number)
   return utcDate(year, month, day)
 }
 
