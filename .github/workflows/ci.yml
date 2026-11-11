@@ -57,6 +57,17 @@ jobs:
         working-directory: deploy/proxmox
         run: shellcheck ct/dayone.sh install/dayone-install.sh
 
+      - name: Check the Proxmox VE scripts install the Node major in .nvmrc
+        working-directory: deploy/proxmox
+        run: |
+          node_major="$(tr -d '[:space:]' <../../.nvmrc)"
+          for f in ct/dayone.sh install/dayone-install.sh; do
+            grep -q "NODE_VERSION=\"${node_major}\" setup_nodejs" "$f" || {
+              echo "::error file=deploy/proxmox/$f::installs a different Node major than .nvmrc (${node_major})"
+              exit 1
+            }
+          done
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest
