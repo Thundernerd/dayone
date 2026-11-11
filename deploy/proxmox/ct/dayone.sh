@@ -3,6 +3,7 @@ _CS_DEFAULT_URL="${_CS_DEFAULT_URL:-https://raw.githubusercontent.com/Thunderner
 _cs_boot="${COMMUNITY_SCRIPTS_CORE_DIR:-$(dirname "${BASH_SOURCE[0]}")/../../core}/core/build.func"
 source "$_cs_boot" 2>/dev/null || source <(curl -fsSL "${COMMUNITY_SCRIPTS_CORE_URL:-https://raw.githubusercontent.com/community-scripts/core/main}/core/build.func")
 # Copyright (c) 2026 Christiaan Bloemendaal
+# License: MIT | https://github.com/Thundernerd/dayone/raw/main/LICENSE
 # Source: https://github.com/Thundernerd/dayone
 #
 # Day One for Proxmox VE, built on the community-scripts.org engine
