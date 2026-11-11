@@ -39,8 +39,8 @@ The repo is private, so the image is too: run `docker login ghcr.io` with a toke
 
 ## CI and releases
 
-- **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: typecheck, production build, and a Docker build check.
-- **Release** (`.github/workflows/release.yml`) runs when you push a version tag. It re-runs CI, publishes the image as `1.2.3`, `1.2`, `1` and `latest`, and creates a GitHub release with generated notes.
+- **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: typecheck, production build, a smoke test of the packaged server archive, a Docker build check, and `actionlint`.
+- **Release** (`.github/workflows/release.yml`) runs when you push a version tag. It re-runs CI, publishes the image as `1.2.3`, `1.2`, `1` and `latest`, and creates a GitHub release with generated notes. The release has the server archive `dayone-1.2.3.tar.gz` attached, with its `dayone-1.2.3.tar.gz.sha256` checksum.
 
 ```bash
 git tag v1.0.0
@@ -48,3 +48,22 @@ git push origin v1.0.0
 ```
 
 Tags with a suffix, such as `v1.1.0-rc.1`, become pre-releases and only get their exact image tag.
+
+### Running the server archive
+
+The archive is the built Nuxt server with its dependencies bundled, so it runs on any architecture with Node 26 and nothing else. Credentials are read at runtime and are never baked into it:
+
+```bash
+sha256sum -c dayone-1.2.3.tar.gz.sha256
+tar -xzf dayone-1.2.3.tar.gz
+cd dayone-1.2.3
+PORT=3000 TWITCH_CLIENT_ID=... TWITCH_CLIENT_SECRET=... node server/index.mjs
+```
+
+To build and check an archive locally, the same way the release does:
+
+```bash
+scripts/package-release.sh 1.2.3                           # dist/dayone-1.2.3.tar.gz (+ .sha256)
+scripts/smoke-test-release.sh dist/dayone-1.2.3.tar.gz      # API must answer 503 without credentials
+scripts/smoke-test-release.sh --with-credentials dist/dayone-1.2.3.tar.gz   # needs TWITCH_* set
+```
