@@ -46,10 +46,14 @@ jobs:
 
       # Builds without Twitch credentials; the server reads them at runtime.
       - name: Build and package the server archive
-        run: scripts/package-release.sh "${{ steps.version.outputs.version }}"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/package-release.sh "$VERSION"
 
       - name: Smoke-test the server archive
-        run: scripts/smoke-test-release.sh "dist/dayone-${{ steps.version.outputs.version }}.tar.gz"
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/smoke-test-release.sh "dist/dayone-$VERSION.tar.gz"
 
       - uses: docker/setup-qemu-action@v4
 
