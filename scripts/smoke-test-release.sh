@@ -28,4 +28,24 @@ tar -xzf "$archive" -C "$workdir" --strip-components=1
 [[ -f "$workdir/server/index.mjs" ]] || fail "server/index.mjs is not at the archive root"
 [[ ! -e "$workdir/node_modules" ]] || fail "the archive should not ship a top-level node_modules"
 
+port="${SMOKE_PORT:-3123}"
+base="http://127.0.0.1:$port"
+log="$workdir/server.log"
+
+(cd "$workdir" && exec env -u TWITCH_CLIENT_ID -u TWITCH_CLIENT_SECRET \
+  HOST=127.0.0.1 PORT="$port" node server/index.mjs) >"$log" 2>&1 &
+server_pid=$!
+trap 'kill "$server_pid" 2>/dev/null || true; rm -rf "$workdir"' EXIT
+
+for _ in $(seq 1 60); do
+  curl -fs -o /dev/null "$base/" && break
+  kill -0 "$server_pid" 2>/dev/null || { cat "$log" >&2; fail "server exited during startup"; }
+  sleep 0.5
+done
+
+# / redirects to the default date range, so follow it to the page itself.
+status="$(curl -sL -o "$workdir/page.html" -w '%{http_code}' "$base/")"
+[[ "$status" == 200 ]] || { cat "$log" >&2; fail "GET / returned $status, expected 200"; }
+grep -q '<title>Day One</title>' "$workdir/page.html" || fail "GET / did not serve the Day One page"
+
 echo "smoke test passed: $archive"
