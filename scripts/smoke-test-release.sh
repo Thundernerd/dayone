@@ -45,6 +45,7 @@ tar -xzf "$archive" -C "$workdir" --strip-components=1
 
 [[ -f "$workdir/server/index.mjs" ]] || fail "server/index.mjs is not at the archive root"
 [[ ! -e "$workdir/node_modules" ]] || fail "the archive should not ship a top-level node_modules"
+grep -q '^MIT License' "$workdir/LICENSE" 2>/dev/null || fail "LICENSE with the MIT text is not at the archive root"
 
 port="${SMOKE_PORT:-3123}"
 base="http://127.0.0.1:$port"

@@ -2,7 +2,8 @@
 # Builds the Nuxt server and packages it as a release archive:
 #
 #   dist/dayone-<version>.tar.gz         one top-level dayone-<version>/ directory
-#                                        holding the contents of .output
+#                                        holding the contents of .output and
+#                                        Day One's LICENSE
 #   dist/dayone-<version>.tar.gz.sha256  its checksum, for `sha256sum -c`
 #
 # The Nitro output bundles its dependencies and has no native code, so the
@@ -25,6 +26,7 @@ env -u TWITCH_CLIENT_ID -u TWITCH_CLIENT_SECRET npm run build -- --dotenv .env.r
 rm -rf "dist/$name" "dist/$name.tar.gz" "dist/$name.tar.gz.sha256"
 mkdir -p "dist/$name"
 cp -R .output/. "dist/$name/"
+cp LICENSE "dist/$name/"
 
 # COPYFILE_DISABLE and --no-xattrs keep macOS tar from adding ._* files and
 # xattr headers that GNU tar warns about when extracting.
