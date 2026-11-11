@@ -39,7 +39,7 @@ The repo is private, so the image is too: run `docker login ghcr.io` with a toke
 
 ## CI and releases
 
-- **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: typecheck, production build, a smoke test of the packaged server archive, a Docker build check, and `actionlint`.
+- **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: typecheck, production build, a smoke test of the packaged server archive, a Docker build check, and `actionlint` plus `shellcheck`.
 - **Release** (`.github/workflows/release.yml`) runs when you push a version tag. It re-runs CI, publishes the image as `1.2.3`, `1.2`, `1` and `latest`, and creates a GitHub release with generated notes. The release has the server archive `dayone-1.2.3.tar.gz` attached, with its `dayone-1.2.3.tar.gz.sha256` checksum.
 
 ```bash
