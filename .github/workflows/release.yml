@@ -57,17 +57,14 @@ jobs:
 
       # Checks the runtime credential path against IGDB before anything is
       # published. The secrets are set only here, never on the build.
+      # Unlike ci.yml, this never skips: a tag push always gets the repo's
+      # secrets, so missing ones are a misconfiguration and fail the release.
       - name: Smoke-test the server archive with Twitch credentials
         env:
           VERSION: ${{ steps.version.outputs.version }}
           TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
           TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
-        run: |
-          if [[ -z "$TWITCH_CLIENT_ID" && -z "$TWITCH_CLIENT_SECRET" ]]; then
-            echo "::notice title=Credentialed smoke test skipped::The TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets are not available to this run."
-            exit 0
-          fi
-          scripts/smoke-test-release.sh --with-credentials "dist/dayone-$VERSION.tar.gz"
+        run: scripts/smoke-test-release.sh --with-credentials "dist/dayone-$VERSION.tar.gz"
 
       - uses: docker/setup-qemu-action@v4
 

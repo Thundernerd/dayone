@@ -74,7 +74,7 @@ gh secret set TWITCH_CLIENT_ID
 gh secret set TWITCH_CLIENT_SECRET
 ```
 
-Runs without the secrets, such as pull requests from forks or Dependabot, skip that step with a notice. So does the CI run inside the release workflow; the release's own publish job runs the check instead.
+Releases need these secrets: if either is missing, the release fails before the image is pushed or the GitHub release is created. CI runs that lack the secrets, such as pull requests from forks or Dependabot, skip that step with a notice. So does the CI run inside the release workflow; the release's own publish job runs the check instead.
 
 ### Running the server archive
 
