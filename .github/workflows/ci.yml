@@ -106,3 +106,7 @@ jobs:
             echo "::error file=Dockerfile::/app/LICENSE is missing or does not hold the MIT text"
             exit 1
           }
+          docker run --rm dayone:ci grep -qx 'THIRD-PARTY SOFTWARE NOTICES' /app/THIRD_PARTY_LICENSES || {
+            echo "::error file=Dockerfile::/app/THIRD_PARTY_LICENSES is missing or is not the generated notices file"
+            exit 1
+          }
