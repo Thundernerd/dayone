@@ -30,9 +30,11 @@ function fail(message) {
   process.exit(1)
 }
 
-for (const name of ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET']) {
+const CREDENTIALS = ['TWITCH_CLIENT_ID', 'TWITCH_CLIENT_SECRET']
+
+for (const name of CREDENTIALS) {
   if (!process.env[name]) {
-    fail(`credentials missing: set TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET (${name} is not set)`)
+    fail(`credentials missing: set ${CREDENTIALS.join(' and ')} (${name} is not set)`)
   }
 }
 
@@ -42,8 +44,7 @@ const { chromium } = await import('playwright')
 // Like scripts/package-release.sh: build without the credentials, and point
 // --dotenv at a file that doesn't exist so a local .env isn't loaded either.
 const buildEnv = { ...process.env }
-delete buildEnv.TWITCH_CLIENT_ID
-delete buildEnv.TWITCH_CLIENT_SECRET
+for (const name of CREDENTIALS) delete buildEnv[name]
 console.log('screenshots: building')
 const build = spawnSync('npm', ['run', 'build', '--', '--dotenv', '.env.screenshots-build-none'], {
   cwd: ROOT,
@@ -56,9 +57,20 @@ let server
 let browser
 let serverLog = ''
 
+const isRunning = () => server && server.exitCode === null && server.signalCode === null
+
 function stopServer() {
-  if (server && server.exitCode === null && server.signalCode === null) server.kill()
+  if (isRunning()) server.kill()
 }
+
+// Stops the server and waits until it has exited, so its port is free again.
+async function stopServerAndWait() {
+  if (!isRunning()) return
+  const exited = new Promise((resolve) => server.once('exit', resolve))
+  server.kill()
+  await exited
+}
+
 // Stop the server however the script ends: success, an error, or Ctrl-C.
 process.on('exit', stopServer)
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
@@ -77,27 +89,47 @@ async function startServer() {
     env: { ...process.env, HOST: '127.0.0.1', PORT: String(PORT) },
     stdio: ['ignore', 'pipe', 'pipe'],
   })
-  await new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('the server did not start listening within 30 seconds')), 30_000)
-    const onOutput = (chunk) => {
-      serverLog += chunk
-      if (serverLog.includes('Listening on')) {
-        clearTimeout(timer)
-        resolve()
-      }
-    }
-    server.stdout.on('data', onOutput)
-    server.stderr.on('data', onOutput)
-    server.on('exit', () => {
-      clearTimeout(timer)
-      reject(new Error(`the server exited during startup (is port ${PORT} in use? set SCREENSHOTS_PORT)`))
+  let listening = () => {}
+  const onOutput = (chunk) => {
+    serverLog += chunk
+    if (serverLog.includes('Listening on')) listening()
+  }
+  server.stdout.on('data', onOutput)
+  server.stderr.on('data', onOutput)
+
+  let onExit, onError, timer
+  try {
+    await new Promise((resolve, reject) => {
+      listening = resolve
+      timer = setTimeout(() => reject(new Error('the server did not start listening within 30 seconds')), 30_000)
+      onExit = () => reject(new Error(`the server exited during startup (is port ${PORT} in use? set SCREENSHOTS_PORT)`))
+      onError = (error) => reject(new Error(`the server could not be started: ${error.message}`))
+      server.once('exit', onExit)
+      server.once('error', onError)
     })
-  })
+  }
+  finally {
+    clearTimeout(timer)
+    server.off('exit', onExit)
+    server.off('error', onError)
+  }
+}
+
+// Opens the fixed view in a fresh browser context, waits until it is fully
+// drawn (see openView), runs fn with the page and closes the context again.
+async function withView(viewport, options, fn) {
+  const { context, page } = await openView(viewport, options)
+  try {
+    return await fn(page)
+  }
+  finally {
+    await context.close()
+  }
 }
 
 // Opens the fixed view and waits until it is fully drawn: the network is idle,
 // every cover in view has loaded, and the web fonts are in.
-async function openView(viewport, options = {}) {
+async function openView(viewport, options) {
   const context = await browser.newContext({
     viewport,
     deviceScaleFactor: 2,
@@ -143,7 +175,9 @@ async function openView(viewport, options = {}) {
 async function settle(page) {
   await page.waitForFunction(() =>
     !document.querySelector('[class*="-enter-"]')
-    && document.getAnimations().every((a) => a.playState !== 'running'))
+    && document.getAnimations()
+      .filter((a) => a instanceof CSSTransition)
+      .every((a) => a.playState !== 'running'))
 }
 
 async function shoot() {
@@ -152,31 +186,26 @@ async function shoot() {
   // PNGs of these photo-heavy views run to several MB, so they are JPEGs.
   const capture = (page) => page.screenshot({ type: 'jpeg', quality: 85 })
 
-  {
-    const { context, page } = await openView(DESKTOP)
+  await withView(DESKTOP, {}, async (page) => {
     shots['wall.jpg'] = await capture(page)
 
     // The first game tile in the first row (each row starts with a date tile).
     await page.locator('div.grid > .group').first().hover()
     await settle(page)
     shots['hover.jpg'] = await capture(page)
-    await context.close()
-  }
+  })
 
-  {
-    const { context, page } = await openView(DESKTOP)
+  await withView(DESKTOP, {}, async (page) => {
     await page.getByRole('button', { name: /Filters/ }).click()
     await page.getByRole('dialog', { name: 'Filters' }).waitFor()
     await settle(page)
     shots['filters.jpg'] = await capture(page)
-    await context.close()
-  }
+  })
 
-  {
-    const { context, page } = await openView(PHONE, { isMobile: true, hasTouch: true })
+  // isMobile applies the page's meta viewport as a phone browser would.
+  await withView(PHONE, { isMobile: true, hasTouch: true }, async (page) => {
     shots['mobile.jpg'] = await capture(page)
-    await context.close()
-  }
+  })
 
   // Write the set only once every shot succeeded, so a failed run never leaves
   // a mix of old and new images behind.
@@ -199,5 +228,5 @@ catch (error) {
 }
 finally {
   await browser?.close()
-  stopServer()
+  await stopServerAndWait()
 }
