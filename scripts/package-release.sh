@@ -26,8 +26,9 @@ rm -rf "dist/$name" "dist/$name.tar.gz" "dist/$name.tar.gz.sha256"
 mkdir -p "dist/$name"
 cp -R .output/. "dist/$name/"
 
-# COPYFILE_DISABLE keeps macOS tar from adding ._* metadata files.
-COPYFILE_DISABLE=1 tar -C dist -czf "dist/$name.tar.gz" "$name"
+# COPYFILE_DISABLE and --no-xattrs keep macOS tar from adding ._* files and
+# xattr headers that GNU tar warns about when extracting.
+COPYFILE_DISABLE=1 tar --no-xattrs -C dist -czf "dist/$name.tar.gz" "$name"
 rm -rf "dist/$name"
 
 (cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
