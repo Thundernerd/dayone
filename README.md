@@ -35,7 +35,7 @@ docker run -d -p 3000:3000 \
   ghcr.io/thundernerd/dayone:latest
 ```
 
-The repo is private, so the image is too: run `docker login ghcr.io` with a token that has `read:packages` first.
+The image is private, even though the repo is public: run `docker login ghcr.io` with a token that has `read:packages` first.
 
 ## Proxmox VE container
 
