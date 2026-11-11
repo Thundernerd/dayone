@@ -35,6 +35,8 @@ docker run -d -p 3000:3000 \
   ghcr.io/thundernerd/dayone:latest
 ```
 
+The image holds the same license notices as the server archive, in `/app/LICENSE` and `/app/THIRD_PARTY_LICENSES`.
+
 The image is private, even though the repo is public: run `docker login ghcr.io` with a token that has `read:packages` first.
 
 ## Proxmox VE container
@@ -78,7 +80,7 @@ Releases need these secrets: if either is missing, the release fails before the 
 
 ### Running the server archive
 
-The archive is the built Nuxt server with its dependencies bundled, so it runs on any architecture with Node 26 and nothing else. Credentials are read at runtime and are never baked into it:
+The archive is the built Nuxt server with its dependencies bundled, so it runs on any architecture with Node 26 and nothing else. Next to `server/` and `public/`, its top level holds Day One's `LICENSE` and `THIRD_PARTY_LICENSES`, the license notices of the bundled packages (`npm run build` generates it as `.output/THIRD_PARTY_LICENSES`). Credentials are read at runtime and are never baked into it:
 
 ```bash
 sha256sum -c dayone-1.2.3.tar.gz.sha256

@@ -2,8 +2,9 @@
 # Builds the Nuxt server and packages it as a release archive:
 #
 #   dist/dayone-<version>.tar.gz         one top-level dayone-<version>/ directory
-#                                        holding the contents of .output and
-#                                        Day One's LICENSE
+#                                        holding the contents of .output (with
+#                                        THIRD_PARTY_LICENSES, which the build
+#                                        generates) and Day One's LICENSE
 #   dist/dayone-<version>.tar.gz.sha256  its checksum, for `sha256sum -c`
 #
 # The Nitro output bundles its dependencies and has no native code, so the
