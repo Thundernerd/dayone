@@ -49,6 +49,15 @@ git push origin v1.0.0
 
 Tags with a suffix, such as `v1.1.0-rc.1`, become pre-releases and only get their exact image tag.
 
+Both workflows also smoke-test the archive with Twitch credentials, checking that the packaged server fetches release JSON from IGDB. This needs the repository secrets `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET`, which are passed to that step only, never to the build:
+
+```bash
+gh secret set TWITCH_CLIENT_ID
+gh secret set TWITCH_CLIENT_SECRET
+```
+
+Runs without the secrets, such as pull requests from forks or Dependabot, skip that step with a notice. So does the CI run inside the release workflow; the release's own publish job runs the check instead.
+
 ### Running the server archive
 
 The archive is the built Nuxt server with its dependencies bundled, so it runs on any architecture with Node 26 and nothing else. Credentials are read at runtime and are never baked into it:
