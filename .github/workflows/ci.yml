@@ -52,6 +52,11 @@ jobs:
       - name: shellcheck
         run: shellcheck scripts/*.sh
 
+      # Picks up deploy/proxmox/.shellcheckrc (the community-scripts checks).
+      - name: ShellCheck the Proxmox VE scripts
+        working-directory: deploy/proxmox
+        run: shellcheck ct/dayone.sh install/dayone-install.sh
+
   docker:
     name: Docker build
     runs-on: ubuntu-latest
