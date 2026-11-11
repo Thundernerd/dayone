@@ -37,6 +37,20 @@ jobs:
       - name: Smoke-test the server archive
         run: scripts/smoke-test-release.sh dist/dayone-0.0.0-ci.tar.gz
 
+      # Checks the runtime credential path against IGDB. The secrets are set only
+      # here, never on the build. Fork and Dependabot PRs get no secrets, and
+      # neither does this workflow when release.yml calls it, so it skips there.
+      - name: Smoke-test the server archive with Twitch credentials
+        env:
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+        run: |
+          if [[ -z "$TWITCH_CLIENT_ID" || -z "$TWITCH_CLIENT_SECRET" ]]; then
+            echo "::notice title=Credentialed smoke test skipped::The TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets are not available to this run."
+            exit 0
+          fi
+          scripts/smoke-test-release.sh --with-credentials dist/dayone-0.0.0-ci.tar.gz
+
   lint:
     name: Lint workflows and scripts
     runs-on: ubuntu-latest
