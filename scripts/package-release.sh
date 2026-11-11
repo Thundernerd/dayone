@@ -18,8 +18,9 @@ cd "$(dirname "$0")/.."
 
 # nuxt.config.ts reads the Twitch credentials at build time, and anything set then
 # is baked into the output. The server reads them at runtime instead, so build
-# without them.
-env -u TWITCH_CLIENT_ID -u TWITCH_CLIENT_SECRET npm run build
+# without them: drop them from the environment, and point --dotenv at a file that
+# doesn't exist so a local .env isn't loaded either.
+env -u TWITCH_CLIENT_ID -u TWITCH_CLIENT_SECRET npm run build -- --dotenv .env.release-build-none
 
 rm -rf "dist/$name" "dist/$name.tar.gz" "dist/$name.tar.gz.sha256"
 mkdir -p "dist/$name"
