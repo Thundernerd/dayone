@@ -37,6 +37,24 @@ docker run -d -p 3000:3000 \
 
 The repo is private, so the image is too: run `docker login ghcr.io` with a token that has `read:packages` first.
 
+## Proxmox VE container
+
+`deploy/proxmox/ct/dayone.sh` is a [community-scripts.org](https://community-scripts.org) script. It runs on their shared engine ([community-scripts/core](https://github.com/community-scripts/core)), so the Day One container is set up like every other community-scripts container: the same Default/Advanced wizard (container ID, storage, network, VLAN, SSH, password and so on), console auto-login when no root password is set, the community-scripts MOTD, the container notes in the Proxmox UI, and the `update` command. Only Day One's own two files come from this repository: `ct/dayone.sh` and `install/dayone-install.sh`.
+
+Run this in the Proxmox VE node's shell:
+
+```sh
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/Thundernerd/dayone/main/deploy/proxmox/ct/dayone.sh)"
+```
+
+The defaults are an unprivileged Debian 13 container with 1 core, 512 MiB RAM and a 4 GiB disk, on x86_64 or arm64. Day One is installed from the server archive of the latest [release](https://github.com/Thundernerd/dayone/releases) and runs on Node 26, so nothing is built in the container. Presets work like in any community script, e.g. `var_ram=1024 var_disk=8 bash -c "$(curl …)"`.
+
+Day One listens on port 3000 of the container's IP. Inside the container:
+- `/etc/dayone/dayone.env` holds the Twitch credentials (see [Setup](#setup)). It starts out empty, and until `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` are filled in, the page shows "IGDB is not configured" instead of releases. Run `systemctl restart dayone` after changes.
+- `/opt/dayone` holds the release files, and the `dayone` service runs them as the `dayone` user.
+
+To update, run `update` in the container. When a newer release exists, it stops Day One, replaces `/opt/dayone`, updates Node 26 and starts Day One again. `/etc/dayone/dayone.env` is kept.
+
 ## CI and releases
 
 - **CI** (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: typecheck, production build, a smoke test of the packaged server archive, a Docker build check, and `actionlint` plus `shellcheck`.
