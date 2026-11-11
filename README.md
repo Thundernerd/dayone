@@ -2,6 +2,13 @@
 
 Upcoming game releases across PlayStation, Xbox, Nintendo and PC, shown as a wall of covers grouped by launch day. Data comes from [IGDB](https://www.igdb.com/).
 
+![The Day One poster wall for October 2026 on PS5: a sticky toolbar with the month and a Filters button above a grid of game covers, each launch day opened by a red tile with its date and game count](docs/screenshots/wall.jpg)
+
+<p>
+  <img src="docs/screenshots/filters.jpg" height="360" alt="The filter drawer open over the dimmed wall, with platform buttons, a month picker and custom date range, junk filters and a minimum hypes slider">
+  <img src="docs/screenshots/mobile.jpg" height="360" alt="The poster wall at phone width: a compact toolbar over a grid of covers three columns wide">
+</p>
+
 ## Setup
 
 IGDB is accessed through a Twitch application. Register a confidential app at <https://dev.twitch.tv/console/apps>, then copy `.env.example` to `.env` and fill in the credentials:
@@ -16,6 +23,8 @@ npm install
 ```bash
 npm run dev      # http://localhost:3000
 ```
+
+The screenshots above come from `npm run screenshots`. Run it with `TWITCH_CLIENT_ID` and `TWITCH_CLIENT_SECRET` set to refresh them after a UI change: it builds the app, starts the built server and photographs the same October 2026 PS5 view into `docs/screenshots/`. The first time, install its browser with `npx playwright install chromium`.
 
 ## Production
 
