@@ -29,6 +29,32 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - id: version
+        name: Version from tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+
+      # Packaged and smoke-tested before anything is published, so a broken
+      # archive stops the release before the image is pushed.
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Builds without Twitch credentials; the server reads them at runtime.
+      - name: Build and package the server archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/package-release.sh "$VERSION"
+
+      - name: Smoke-test the server archive
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: scripts/smoke-test-release.sh "dist/dayone-$VERSION.tar.gz"
+
       - uses: docker/setup-qemu-action@v4
 
       - uses: docker/setup-buildx-action@v4
@@ -63,10 +89,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.ref_name }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          version="${TAG#v}"
+          archive="dist/dayone-${VERSION}.tar.gz"
+          node_major="$(cat .nvmrc)"
           prerelease=()
-          if [[ "$version" == *-* ]]; then
+          if [[ "$VERSION" == *-* ]]; then
             prerelease=(--prerelease)
           fi
 
@@ -74,7 +102,17 @@ jobs:
           Docker image:
 
           \`\`\`sh
-          docker pull ${IMAGE}:${version}
+          docker pull ${IMAGE}:${VERSION}
+          \`\`\`
+
+          Server archive (\`dayone-${VERSION}.tar.gz\`), for running without Docker. It needs
+          Node ${node_major} and nothing else, on any architecture:
+
+          \`\`\`sh
+          sha256sum -c dayone-${VERSION}.tar.gz.sha256
+          tar -xzf dayone-${VERSION}.tar.gz
+          cd dayone-${VERSION}
+          PORT=3000 TWITCH_CLIENT_ID=… TWITCH_CLIENT_SECRET=… node server/index.mjs
           \`\`\`
           EOF
 
@@ -83,4 +121,5 @@ jobs:
             --verify-tag \
             --generate-notes \
             "${prerelease[@]}" \
-            --notes-file notes.md
+            --notes-file notes.md \
+            "$archive" "$archive.sha256"
