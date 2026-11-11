@@ -53,13 +53,20 @@ log="$workdir/server.log"
 (cd "$workdir" && exec "${server_env[@]}" \
   HOST=127.0.0.1 PORT="$port" node server/index.mjs) >"$log" 2>&1 &
 server_pid=$!
-trap 'kill "$server_pid" 2>/dev/null || true; rm -rf "$workdir"' EXIT
+trap 'kill "$server_pid" 2>/dev/null; wait "$server_pid" 2>/dev/null; rm -rf "$workdir"' EXIT
 
+# Wait for this server to say it is listening, rather than for the port to answer:
+# if something else already holds the port, node exits and we must not test that.
+ready=false
 for _ in $(seq 1 60); do
-  curl -fs -o /dev/null "$base/" && break
   kill -0 "$server_pid" 2>/dev/null || { cat "$log" >&2; fail "server exited during startup"; }
+  if grep -q "Listening on" "$log"; then
+    ready=true
+    break
+  fi
   sleep 0.5
 done
+$ready || { cat "$log" >&2; fail "server did not start listening within 30 seconds"; }
 
 # / redirects to the default date range, so follow it to the page itself.
 status="$(curl -sL -o "$workdir/page.html" -w '%{http_code}' "$base/")"
