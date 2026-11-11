@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # Copyright (c) 2026 Christiaan Bloemendaal
+# License: MIT | https://github.com/Thundernerd/dayone/raw/main/LICENSE
 # Source: https://github.com/Thundernerd/dayone
 
 source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
