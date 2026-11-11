@@ -38,6 +38,8 @@ variables
 color
 catch_errors
 
+DAYONE_REPO="Thundernerd/dayone"
+
 function update_script() {
   header_info
   check_container_storage
@@ -48,13 +50,13 @@ function update_script() {
     exit
   fi
 
-  if check_for_gh_release "dayone" "Thundernerd/dayone"; then
+  if check_for_gh_release "dayone" "$DAYONE_REPO"; then
     msg_info "Stopping Service"
     systemctl stop dayone
     msg_ok "Stopped Service"
 
     # /opt/dayone only holds the release; the credentials live in /etc/dayone.
-    CLEAN_INSTALL=1 fetch_and_deploy_gh_release "dayone" "Thundernerd/dayone" "prebuild" "latest" "/opt/dayone" "dayone-*.tar.gz"
+    CLEAN_INSTALL=1 fetch_and_deploy_gh_release "dayone" "$DAYONE_REPO" "prebuild" "latest" "/opt/dayone" "dayone-*.tar.gz"
 
     # Updates Node 26 in place.
     NODE_VERSION="26" setup_nodejs
