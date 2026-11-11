@@ -95,5 +95,18 @@ jobs:
         with:
           context: .
           push: false
+          load: true
+          tags: dayone:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Check the image ships the license notices
+        run: |
+          docker run --rm dayone:ci head -n 1 /app/LICENSE | grep -qx 'MIT License' || {
+            echo "::error file=Dockerfile::/app/LICENSE is missing or does not hold the MIT text"
+            exit 1
+          }
+          docker run --rm dayone:ci grep -qx 'THIRD-PARTY SOFTWARE NOTICES' /app/THIRD_PARTY_LICENSES || {
+            echo "::error file=Dockerfile::/app/THIRD_PARTY_LICENSES is missing or is not the generated notices file"
+            exit 1
+          }

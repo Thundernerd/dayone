@@ -7,6 +7,10 @@
 # --with-credentials, TWITCH_CLIENT_ID/SECRET from the environment are passed to
 # the server and the API must answer with release JSON.
 #
+# It also checks the license notices: Day One's LICENSE at the archive root, and
+# a THIRD_PARTY_LICENSES entry for every package bundled into the server, both
+# the ones traced into server/node_modules and the ones inlined into its chunks.
+#
 # Usage: scripts/smoke-test-release.sh [--with-credentials] dist/dayone-<version>.tar.gz
 set -euo pipefail
 
@@ -45,6 +49,61 @@ tar -xzf "$archive" -C "$workdir" --strip-components=1
 
 [[ -f "$workdir/server/index.mjs" ]] || fail "server/index.mjs is not at the archive root"
 [[ ! -e "$workdir/node_modules" ]] || fail "the archive should not ship a top-level node_modules"
+[[ "$(head -n 1 "$workdir/LICENSE" 2>/dev/null)" == "MIT License" ]] \
+  || fail "LICENSE with the MIT text is not at the archive root"
+[[ -f "$workdir/THIRD_PARTY_LICENSES" ]] || fail "THIRD_PARTY_LICENSES is not at the archive root"
+
+# Every package Nitro traced into server/node_modules (at any depth) must have
+# an entry, headed by a "<name> <version>" line.
+# shellcheck disable=SC2016 # the $ in this JavaScript are not shell expansions
+traced="$(node -e '
+  const fs = require("fs"), path = require("path");
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir)) {
+      const pkgDir = path.join(dir, entry);
+      if (entry.startsWith("@")) { walk(pkgDir); continue; }
+      if (entry === ".nitro") { walk(pkgDir); continue; }
+      const manifest = path.join(pkgDir, "package.json");
+      if (fs.existsSync(manifest)) {
+        const { name, version } = JSON.parse(fs.readFileSync(manifest, "utf8"));
+        if (name && version) console.log(`${name} ${version}`);
+      }
+      walk(path.join(pkgDir, "node_modules"));
+    }
+  };
+  walk(process.argv[1]);
+' "$workdir/server/node_modules")"
+[[ -n "$traced" ]] || fail "found no packages under server/node_modules"
+while IFS= read -r package; do
+  grep -Fqx "$package" "$workdir/THIRD_PARTY_LICENSES" \
+    || fail "THIRD_PARTY_LICENSES has no entry for $package, which is bundled in server/node_modules"
+done <<<"$traced"
+
+# Every package Nitro inlined into the server chunks must have an entry too. The
+# chunks' sourcemaps name the node_modules files each chunk was built from.
+# shellcheck disable=SC2016 # the $ in this JavaScript are not shell expansions
+inlined="$(node -e '
+  const fs = require("fs"), path = require("path");
+  const [chunks, notices] = process.argv.slice(1);
+  const names = new Set();
+  for (const file of fs.readdirSync(chunks, { recursive: true })) {
+    if (!file.endsWith(".map")) continue;
+    for (const source of JSON.parse(fs.readFileSync(path.join(chunks, file), "utf8")).sources ?? []) {
+      const at = source.lastIndexOf("node_modules/");
+      if (at < 0) continue;
+      const segments = source.slice(at + "node_modules/".length).split("/");
+      if (segments[0].startsWith(".")) continue; // build-generated code, not a package
+      names.add(segments.slice(0, segments[0].startsWith("@") ? 2 : 1).join("/"));
+    }
+  }
+  if (names.size === 0) { console.log("(none found in the sourcemaps)"); process.exit(); }
+  const lines = fs.readFileSync(notices, "utf8").split("\n");
+  const listed = new Set(lines.filter((_, i) => /^={80}$/.test(lines[i - 1] ?? "")).map(l => l.split(" ")[0]));
+  for (const name of names) if (!listed.has(name)) console.log(name);
+' "$workdir/server/chunks" "$workdir/THIRD_PARTY_LICENSES")"
+[[ -z "$inlined" ]] \
+  || fail "THIRD_PARTY_LICENSES has no entry for these packages inlined into server/chunks: ${inlined//$'\n'/, }"
 
 port="${SMOKE_PORT:-3123}"
 base="http://127.0.0.1:$port"
