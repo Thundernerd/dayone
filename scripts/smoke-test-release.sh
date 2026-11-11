@@ -46,6 +46,34 @@ tar -xzf "$archive" -C "$workdir" --strip-components=1
 [[ -f "$workdir/server/index.mjs" ]] || fail "server/index.mjs is not at the archive root"
 [[ ! -e "$workdir/node_modules" ]] || fail "the archive should not ship a top-level node_modules"
 grep -q '^MIT License' "$workdir/LICENSE" 2>/dev/null || fail "LICENSE with the MIT text is not at the archive root"
+[[ -f "$workdir/THIRD_PARTY_LICENSES" ]] || fail "THIRD_PARTY_LICENSES is not at the archive root"
+
+# Every package Nitro traced into server/node_modules (at any depth) must have
+# an entry, headed by a "<name> <version>" line.
+# shellcheck disable=SC2016 # the $ in this JavaScript are not shell expansions
+traced="$(node -e '
+  const fs = require("fs"), path = require("path");
+  const walk = (dir) => {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir)) {
+      const pkgDir = path.join(dir, entry);
+      if (entry.startsWith("@")) { walk(pkgDir); continue; }
+      if (entry === ".nitro") { walk(pkgDir); continue; }
+      const manifest = path.join(pkgDir, "package.json");
+      if (fs.existsSync(manifest)) {
+        const { name, version } = JSON.parse(fs.readFileSync(manifest, "utf8"));
+        if (name && version) console.log(`${name} ${version}`);
+      }
+      walk(path.join(pkgDir, "node_modules"));
+    }
+  };
+  walk(process.argv[1]);
+' "$workdir/server/node_modules")"
+[[ -n "$traced" ]] || fail "found no packages under server/node_modules"
+while IFS= read -r package; do
+  grep -Fqx "$package" "$workdir/THIRD_PARTY_LICENSES" \
+    || fail "THIRD_PARTY_LICENSES has no entry for $package, which is bundled in server/node_modules"
+done <<<"$traced"
 
 port="${SMOKE_PORT:-3123}"
 base="http://127.0.0.1:$port"
