@@ -15,7 +15,7 @@ interface Package {
   version: string
   license: string
   /** Where to read the license files from: the package in the project's node_modules. */
-  dir: string | undefined
+  dir: string
 }
 
 interface BundleOutput {
@@ -86,8 +86,8 @@ function tracedPackages(dir: string, found: Array<{ name: string, version: strin
   return found
 }
 
-/** Finds a package's directory in the project's node_modules by name and version, via the lockfile. */
-function lockfileLookup(rootDir: string) {
+/** Returns a resolver from a package's name and version to its directory in the project's node_modules, via the lockfile. */
+function projectPackageResolver(rootDir: string) {
   const lockfile = join(rootDir, 'package-lock.json')
   const packages: Record<string, { version?: string }> = existsSync(lockfile)
     ? JSON.parse(readFileSync(lockfile, 'utf8')).packages ?? {}
@@ -100,8 +100,8 @@ function lockfileLookup(rootDir: string) {
   }
 }
 
-function licenseText(dir: string | undefined): string | undefined {
-  if (!dir || !existsSync(dir)) return undefined
+function licenseText(dir: string): string | undefined {
+  if (!existsSync(dir)) return undefined
   const files = readdirSync(dir).filter(file => LICENSE_FILE.test(file)).sort()
   const texts = files.map(file => readFileSync(join(dir, file), 'utf8').trim()).filter(Boolean)
   return texts.length ? texts.join(`\n\n${THIN_RULE}\n\n`) : undefined
@@ -152,9 +152,16 @@ export default defineNuxtModule({
           add({ name: manifest.name, version: manifest.version, license: licenseOf(manifest), dir })
         }
 
-        const findInProject = lockfileLookup(nuxt.options.rootDir)
+        // The traced copies hold no license files, so read them from the package in
+        // the project's node_modules. Not finding it there would leave a gap in the
+        // notices, so that fails the build.
+        const findInProject = projectPackageResolver(nuxt.options.rootDir)
         for (const pkg of tracedPackages(join(nitro.options.output.serverDir, 'node_modules'))) {
-          add({ ...pkg, dir: findInProject(pkg.name, pkg.version) })
+          const dir = findInProject(pkg.name, pkg.version)
+          if (!dir) {
+            throw new Error(`Cannot find ${pkg.name} ${pkg.version}, which Nitro traced into the server, in package-lock.json, so its license notice is missing`)
+          }
+          add({ ...pkg, dir })
         }
 
         const sorted = [...packages.values()].sort((a, b) =>
