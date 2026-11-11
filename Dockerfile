@@ -20,6 +20,7 @@ ENV NODE_ENV=production \
 
 # The Nitro output is self-contained, so the runtime image needs no node_modules.
 COPY --from=build --chown=node:node /app/.output ./.output
+COPY --from=build --chown=node:node /app/LICENSE ./
 
 USER node
 EXPOSE 3000
